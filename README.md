@@ -8,16 +8,30 @@ Usage:
 
 Available Commands:
   help        Help about any command
+  mock        Start live mocks of API dependencies
   validate    Validate a file against the OpenDeps schema
 ```
 
-Validation:
+Validate OpenDeps file:
 
 ```
 Validates a YAML file against the OpenDeps schema.
 
 Usage:
   opendeps validate FILE
+```
+
+Create and start mocks:
+
+```
+Starts a live mock of your API dependencies, based
+on their OpenAPI specifications defined in the OpenDeps file.
+
+This assumes that the specification URL is reachable
+by this tool.
+
+Usage:
+  opendeps mock FILE
 ```
 
 Help:
