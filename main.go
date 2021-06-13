@@ -15,7 +15,9 @@ limitations under the License.
 */
 package main
 
-import "opendeps.org/opendeps/cmd"
+import (
+	"opendeps.org/opendeps/cmd"
+)
 
 func main() {
 	cmd.Execute()

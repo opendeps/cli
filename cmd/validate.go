@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"github.com/xeipuuv/gojsonschema"
 	"io/ioutil"
 	"log"
@@ -27,13 +28,13 @@ import (
 
 // validateCmd represents the validate command
 var validateCmd = &cobra.Command{
-	Use:   "validate FILE",
+	Use:   "validate OPENDEPS_FILE",
 	Short: "Validate a file against the OpenDeps schema",
 	Long:  `Validates a YAML file against the OpenDeps schema.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		spec := args[0]
-		fmt.Printf("validating %v\n", spec)
+		logrus.Infof("validating %v\n", spec)
 
 		json, err := loadSpecAsJson(spec)
 		if err != nil {
@@ -67,11 +68,11 @@ func validateSpec(json []byte) {
 	}
 
 	if result.Valid() {
-		fmt.Printf("The document is valid\n")
+		logrus.Infof("The document is valid\n")
 	} else {
-		fmt.Printf("The document is not valid. see errors :\n")
+		logrus.Warnf("The document is not valid. see errors :\n")
 		for _, desc := range result.Errors() {
-			fmt.Printf("- %s\n", desc)
+			logrus.Warnf("- %s\n", desc)
 		}
 	}
 }

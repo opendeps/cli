@@ -9,6 +9,7 @@ Usage:
 Available Commands:
   help        Help about any command
   mock        Start live mocks of API dependencies
+  test        Tests the availability of dependencies
   validate    Validate a file against the OpenDeps schema
 ```
 
@@ -18,7 +19,7 @@ Validate OpenDeps file:
 Validates a YAML file against the OpenDeps schema.
 
 Usage:
-  opendeps validate FILE
+  opendeps validate OPENDEPS_FILE
 ```
 
 Create and start mocks:
@@ -31,7 +32,23 @@ This assumes that the specification URL is reachable
 by this tool.
 
 Usage:
-  opendeps mock FILE
+  opendeps mock OPENDEPS_FILE
+```
+
+Test dependencies are available:
+```
+Invokes the availability endpoints of each dependency,
+optionally ignoring failures if the dependency is not
+marked as required.
+
+Usage:
+  opendeps test OPENDEPS_FILE [flags]
+
+Flags:
+  -o, --fail-optional   Fail if optional dependencies are down (default false)
+  -h, --help            help for test
+  -q, --quit-if-down    Return non-zero status if dependencies are down
+  -s, --stop-if-down    Don't check further dependencies if one is down
 ```
 
 Help:

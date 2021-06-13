@@ -24,10 +24,11 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"io"
 	"opendeps.org/opendeps/fileutil"
-	"opendeps.org/opendeps/parser"
+	"opendeps.org/opendeps/model"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -37,7 +38,7 @@ import (
 
 // mockCmd represents the mock command
 var mockCmd = &cobra.Command{
-	Use:   "mock FILE",
+	Use:   "mock OPENDEPS_FILE",
 	Short: "Start live mocks of API dependencies",
 	Long: `Starts a live mock of your API dependencies, based
 on their OpenAPI specifications defined in the OpenDeps file.
@@ -48,8 +49,8 @@ by this tool.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		specFile := args[0]
 
-		fmt.Printf("reading dependencies: %v\n", specFile)
-		spec := parser.Parse(specFile)
+		logrus.Debugf("reading dependencies: %v\n", specFile)
+		spec := model.Parse(specFile)
 
 		stagingDir := generateMockConfig(specFile, spec)
 		defer os.Remove(stagingDir)
@@ -73,7 +74,7 @@ func init() {
 }
 
 func startMockEngine(stagingDir string) {
-	fmt.Println("starting mock engine")
+	logrus.Info("starting mock engine")
 
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -128,7 +129,7 @@ func startMockEngine(stagingDir string) {
 	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
 }
 
-func generateMockConfig(specFile string, spec parser.OpenDeps) string {
+func generateMockConfig(specFile string, spec model.OpenDeps) string {
 	specDir := filepath.Dir(specFile)
 	stagingDir := fileutil.GenerateStagingDir()
 
@@ -141,11 +142,11 @@ func generateMockConfig(specFile string, spec parser.OpenDeps) string {
 		} else if strings.HasPrefix(dependency.Spec, "./") {
 			openapiNormalisedPath = filepath.Join(specDir, strings.TrimPrefix(dependency.Spec, "."))
 		} else {
-			fmt.Printf("warning: skipping unsupported spec url: %v\n", dependency.Spec)
+			logrus.Warnf("skipping unsupported spec url: %v\n", dependency.Spec)
 			continue
 		}
 
-		fmt.Printf("copying openapi spec: %v\n", openapiNormalisedPath)
+		logrus.Debugf("copying openapi spec: %v\n", openapiNormalisedPath)
 
 		openapiFilename := filepath.Base(openapiNormalisedPath)
 		openapiDestFile := filepath.Join(stagingDir, openapiFilename)
@@ -178,7 +179,7 @@ specFile: "%v"
 }
 
 func stopMockEngine(cli *client.Client, ctx context.Context, containerID string) {
-	fmt.Printf("\rstopping mock engine...\n")
+	logrus.Infof("\rstopping mock engine...\n")
 	err := cli.ContainerStop(ctx, containerID, nil)
 	if err != nil {
 		panic(err)

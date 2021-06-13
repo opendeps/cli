@@ -2,6 +2,7 @@ package fileutil
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,7 +14,7 @@ func GenerateStagingDir() string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("created staging dir: %v\n", tempDir)
+	logrus.Debugf("created staging dir: %v\n", tempDir)
 	return tempDir
 }
 
