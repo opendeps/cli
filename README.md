@@ -1,5 +1,13 @@
 # The Open Dependencies project (OpenDeps) CLI
 
+Features:
+
+* Start live mocks of dependencies
+* Test the availability of dependencies
+* Validate OpenDeps files against schema
+
+## Usage
+
 Top level command:
 
 ```
@@ -11,15 +19,6 @@ Available Commands:
   mock        Start live mocks of API dependencies
   test        Tests the availability of dependencies
   validate    Validate a file against the OpenDeps schema
-```
-
-Validate OpenDeps file:
-
-```
-Validates a YAML file against the OpenDeps schema.
-
-Usage:
-  opendeps validate OPENDEPS_FILE
 ```
 
 Create and start mocks:
@@ -51,6 +50,15 @@ Flags:
   -s, --stop-if-down    Don't check further dependencies if one is down
 ```
 
+Validate OpenDeps file:
+
+```
+Validates a YAML file against the OpenDeps schema.
+
+Usage:
+  opendeps validate OPENDEPS_FILE
+```
+
 Help:
 
 ```
@@ -60,6 +68,12 @@ Simply type opendeps help [path to command] for full details.
 Usage:
   opendeps help [command] [flags]
 ```
+
+### Logging
+
+The default log level is `debug`. You can override this by setting the `LOG_LEVEL` environment variable:
+
+    export LOG_LEVEL=info
 
 ---
 

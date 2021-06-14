@@ -61,16 +61,6 @@ by this tool.`,
 
 func init() {
 	rootCmd.AddCommand(mockCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// mockCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// mockCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func startMockEngine(stagingDir string) {
@@ -86,7 +76,10 @@ func startMockEngine(stagingDir string) {
 	if err != nil {
 		panic(err)
 	}
-	io.Copy(os.Stdout, reader)
+	_, err = io.Copy(os.Stdout, reader)
+	if err != nil {
+		panic(err)
+	}
 
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
 		Image: "outofcoffee/imposter-openapi",
@@ -126,31 +119,22 @@ func startMockEngine(stagingDir string) {
 		panic(err)
 	}
 
-	stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+	_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+	if err != nil {
+		panic(err)
+	}
 }
 
-func generateMockConfig(specFile string, spec model.OpenDeps) string {
-	specDir := filepath.Dir(specFile)
+func generateMockConfig(specFile string, spec *model.OpenDeps) string {
 	stagingDir := fileutil.GenerateStagingDir()
 
 	for _, dependency := range spec.Dependencies {
-		var openapiNormalisedPath string
-		if strings.HasPrefix(dependency.Spec, "file://") {
-			openapiNormalisedPath = strings.TrimPrefix(dependency.Spec, "file://")
-		} else if strings.HasPrefix(dependency.Spec, "file:") {
-			openapiNormalisedPath = strings.TrimPrefix(dependency.Spec, "file:")
-		} else if strings.HasPrefix(dependency.Spec, "./") {
-			openapiNormalisedPath = filepath.Join(specDir, strings.TrimPrefix(dependency.Spec, "."))
-		} else {
-			logrus.Warnf("skipping unsupported spec url: %v\n", dependency.Spec)
-			continue
-		}
-
+		openapiNormalisedPath := makeAbsoluteRelativeToFile(dependency.Spec, specFile)
 		logrus.Debugf("copying openapi spec: %v\n", openapiNormalisedPath)
 
 		openapiFilename := filepath.Base(openapiNormalisedPath)
 		openapiDestFile := filepath.Join(stagingDir, openapiFilename)
-		err := fileutil.CopyFile(openapiNormalisedPath, openapiDestFile)
+		err := fileutil.CopyContent(openapiNormalisedPath, openapiDestFile)
 		if err != nil {
 			panic(err)
 		}
@@ -158,6 +142,18 @@ func generateMockConfig(specFile string, spec model.OpenDeps) string {
 		writeMockConfig(stagingDir, openapiFilename)
 	}
 	return stagingDir
+}
+
+func makeAbsoluteRelativeToFile(filePath string, specFile string) string {
+	specDir := filepath.Dir(specFile)
+
+	var openapiNormalisedPath string
+	if strings.HasPrefix(filePath, "./") {
+		openapiNormalisedPath = filepath.Join(specDir, strings.TrimPrefix(filePath, "."))
+	} else {
+		openapiNormalisedPath = filePath
+	}
+	return openapiNormalisedPath
 }
 
 func writeMockConfig(configDir string, openapiFilename string) {

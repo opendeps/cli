@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	"net/http"
 	"opendeps.org/opendeps/model"
+	"opendeps.org/opendeps/openapi"
 	"os"
 )
 
@@ -42,7 +43,7 @@ marked as required.`,
 
 		unavailable := false
 		for _, dep := range spec.Dependencies {
-			err := testDependency(dep)
+			err := testDependency(specFile, dep)
 			if err != nil {
 				if dep.Required || failOptional {
 					logrus.Warnf("\u274C unavailable: %v: %v", dep.Summary, err)
@@ -65,7 +66,15 @@ marked as required.`,
 	},
 }
 
-func testDependency(dep model.DependencyModel) error {
+func init() {
+	rootCmd.AddCommand(testCmd)
+
+	testCmd.Flags().BoolVarP(&quitIfDown, "quit-if-down", "q", false, "Exit with non-zero status if dependencies are down")
+	testCmd.Flags().BoolVarP(&stopIfDown, "stop-if-down", "s", false, "Don't check further dependencies if one is down")
+	testCmd.Flags().BoolVarP(&failOptional, "fail-optional", "o", false, "Fail if optional dependencies are down (default false)")
+}
+
+func testDependency(specFile string, dep model.Dependency) error {
 	if "" != dep.Availability.Security {
 		logrus.Warnf("security configuration for availability endpoints is not supported\n")
 	}
@@ -74,9 +83,15 @@ func testDependency(dep model.DependencyModel) error {
 	if "" != dep.Availability.Url {
 		// fully qualified
 		url = dep.Availability.Url
+
 	} else if "" != dep.Availability.Path {
-		// relative
-		url = fmt.Sprintf("http://localhost:8080/%v", dep.Availability.Path)
+		// relative - use openapi spec servers as base path
+		basePath, err := determineBasePath(specFile, dep)
+		if err != nil {
+			return err
+		}
+		url = fmt.Sprintf("%v/%v", basePath, dep.Availability.Path)
+
 	} else {
 		panic(fmt.Errorf("No availability URL or path for %v\n", dep.Summary))
 	}
@@ -93,10 +108,18 @@ func testDependency(dep model.DependencyModel) error {
 	return nil
 }
 
-func init() {
-	rootCmd.AddCommand(testCmd)
-
-	testCmd.Flags().BoolVarP(&quitIfDown, "quit-if-down", "q", false, "Exit with non-zero status if dependencies are down")
-	testCmd.Flags().BoolVarP(&stopIfDown, "stop-if-down", "s", false, "Don't check further dependencies if one is down")
-	testCmd.Flags().BoolVarP(&failOptional, "fail-optional", "o", false, "Fail if optional dependencies are down (default false)")
+func determineBasePath(specFile string, dependency model.Dependency) (string, error) {
+	openapiNormalisedPath := makeAbsoluteRelativeToFile(dependency.Spec, specFile)
+	openapiSpec, err := openapi.Parse(openapiNormalisedPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse spec [%v]: %v\n", openapiNormalisedPath, err)
+	}
+	if len(openapiSpec.Servers) == 0 {
+		return "", fmt.Errorf("no servers found in spec [%v]\n", openapiNormalisedPath)
+	} else if len(openapiSpec.Servers) > 1 {
+		logrus.Warnf("more than 1 server found in spec [%v] - using first\n", openapiNormalisedPath)
+	}
+	serverUrl := openapiSpec.Servers[0].Url
+	logrus.Debugf("determined server [%v] from openapi spec [%v]", serverUrl, openapiNormalisedPath)
+	return serverUrl, nil
 }

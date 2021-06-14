@@ -45,6 +45,10 @@ var validateCmd = &cobra.Command{
 	},
 }
 
+func init() {
+	rootCmd.AddCommand(validateCmd)
+}
+
 func loadSpecAsJson(specFile string) ([]byte, error) {
 	y, err := ioutil.ReadFile(specFile)
 	if err != nil {
@@ -75,8 +79,4 @@ func validateSpec(json []byte) {
 			logrus.Warnf("- %s\n", desc)
 		}
 	}
-}
-
-func init() {
-	rootCmd.AddCommand(validateCmd)
 }

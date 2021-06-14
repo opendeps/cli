@@ -16,9 +16,22 @@ limitations under the License.
 package main
 
 import (
+	"github.com/sirupsen/logrus"
 	"opendeps.org/opendeps/cmd"
+	"os"
 )
 
 func main() {
+	lvl, ok := os.LookupEnv("LOG_LEVEL")
+	if !ok {
+		lvl = "debug"
+	}
+	ll, err := logrus.ParseLevel(lvl)
+	if err != nil {
+		ll = logrus.DebugLevel
+	}
+	// set global log level
+	logrus.SetLevel(ll)
+
 	cmd.Execute()
 }
