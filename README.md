@@ -6,7 +6,19 @@ Features:
 * Test the availability of dependencies
 * Validate OpenDeps files against schema
 
-## Usage
+## Getting started & documentation
+
+### Installation
+
+See the [Installation](./docs/install.md) instructions for your system.
+
+Or, use this one liner (macOS and Linux only):
+
+```shell
+curl -L https://raw.githubusercontent.com/opendeps/cli/main/install/install_opendeps.sh | bash -
+```
+
+### Usage
 
 Top level command:
 
