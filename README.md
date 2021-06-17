@@ -4,7 +4,7 @@ Features:
 
 * Start live mocks of dependencies
 * Test the availability of dependencies
-* Validate OpenDeps files against schema
+* Validate OpenDeps files against [the specification](https://github.com/opendeps/specification)
 
 ## Getting started & documentation
 

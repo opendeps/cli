@@ -59,3 +59,11 @@ unzip.exe opendeps.zip
 # use command (or add to PATH)
 opendeps.exe [command/args]
 ```
+
+## Uninstall
+
+To uninstall, remove the `opendeps` binary from `/usr/local/bin` (macOS and Linux only).
+
+```shell
+rm /usr/local/bin/opendeps
+```

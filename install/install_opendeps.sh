@@ -28,35 +28,35 @@ function unsupported_arch() {
 }
 
 function is_macos() {
-	case "$(uname -s)" in
-	*darwin* ) true ;;
-	*Darwin* ) true ;;
-	* ) false;;
-	esac
+  case "$(uname -s)" in
+  *darwin* ) true ;;
+  *Darwin* ) true ;;
+  * ) false;;
+  esac
 }
 
 function is_linux() {
-	case "$(uname -s)" in
-	*Linux* ) true ;;
-	*linux* ) true ;;
-	* ) false;;
-	esac
+  case "$(uname -s)" in
+  *Linux* ) true ;;
+  *linux* ) true ;;
+  * ) false;;
+  esac
 }
 
 function find_arch() {
   if [[ is_macos ]]; then
     case "$(uname -p)" in
-    *i386* ) echo "x86_64" ;;
-    *x86_64* ) echo "x86_64" ;;
+    *i386* ) OPENDEPS_ARCH="x86_64" ;;
+    *x86_64* ) OPENDEPS_ARCH="x86_64" ;;
     * ) unsupported_arch;;
     esac
   else
     case "$(uname -p)" in
-    *i686* ) echo "x86_64" ;;
-    *x86_64* ) echo "x86_64" ;;
-    *armv6* ) echo "arm" ;;
-    *armv7* ) echo "arm" ;;
-    *arm64* ) echo "arm64" ;;
+    *i686* ) OPENDEPS_ARCH="x86_64" ;;
+    *x86_64* ) OPENDEPS_ARCH="x86_64" ;;
+    *armv6* ) OPENDEPS_ARCH="arm" ;;
+    *armv7* ) OPENDEPS_ARCH="arm" ;;
+    *arm64* ) OPENDEPS_ARCH="arm64" ;;
     * ) unsupported_arch;;
     esac
   fi
@@ -70,8 +70,6 @@ function find_os() {
     else
       unsupported_arch
     fi
-
-    OPENDEPS_ARCH="$( find_arch )"
 }
 
 function find_version() {
@@ -93,6 +91,7 @@ function find_version() {
 }
 
 find_os
+find_arch
 find_version
 DOWNLOAD_URL="${BASE_URL}/v${OPENDEPS_VERSION}/opendeps_${OPENDEPS_VERSION}_${OPENDEPS_OS}_${OPENDEPS_ARCH}.tar.gz"
 
@@ -101,7 +100,7 @@ cd "${OPENDEPS_TEMP_DIR}"
 
 echo -e "\nDownloading from ${DOWNLOAD_URL}"
 curl --fail -L -o opendeps.tar.gz "${DOWNLOAD_URL}"
-tar xvf opendeps.tar.gz
+tar xf opendeps.tar.gz
 
 echo -e "\nInstalling to /usr/local/bin"
 cp ./opendeps /usr/local/bin/opendeps
