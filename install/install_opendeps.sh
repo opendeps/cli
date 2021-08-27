@@ -44,7 +44,7 @@ function is_linux() {
 }
 
 function find_arch() {
-  if [[ is_macos ]]; then
+  if is_macos; then
     case "$(uname -p)" in
     *i386* ) OPENDEPS_ARCH="x86_64" ;;
     *x86_64* ) OPENDEPS_ARCH="x86_64" ;;
@@ -63,9 +63,9 @@ function find_arch() {
 }
 
 function find_os() {
-    if [[ is_macos ]]; then
+    if is_macos; then
       OPENDEPS_OS="macOS"
-    elif [[ is_linux ]]; then
+    elif is_linux; then
       OPENDEPS_OS="Linux"
     else
       unsupported_arch
@@ -77,7 +77,7 @@ function find_version() {
       echo "Attempting to determine latest version..."
       if [[ ! $( command -v jq ) ]]; then
         echo "Error: jq must be installed on your system in order to determine latest version."
-        echo "Either install jq or set OPENDEPS_VERSION."
+        echo "Either install jq or set the OPENDEPS_VERSION environment variable."
         exit 1
       fi
 
