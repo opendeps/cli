@@ -12,6 +12,15 @@ Features:
 
 See the [Installation](./docs/install.md) instructions for your system.
 
+#### Homebrew
+
+If you have Homebrew installed:
+
+    brew tap opendeps/cli
+    brew install opendeps
+
+#### Shell script
+
 Or, use this one liner (macOS and Linux only):
 
 ```shell

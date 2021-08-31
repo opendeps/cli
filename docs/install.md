@@ -1,8 +1,21 @@
 # Installation
 
-## One-liner
+OpenDeps can be installed on Linux, macOS and Windows.
 
-Use this one liner (macOS and Linux only):
+## Quick start
+
+Use these instructions to get up and running quickly.
+
+### Homebrew
+
+If you have Homebrew installed:
+
+    brew tap opendeps/cli
+    brew install opendeps
+
+### Shell script
+
+Or, use this one liner (macOS and Linux only):
 
 ```shell
 curl -L https://raw.githubusercontent.com/opendeps/cli/main/install/install_opendeps.sh | bash -
