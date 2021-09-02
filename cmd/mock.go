@@ -16,17 +16,10 @@ limitations under the License.
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/mount"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/go-connections/nat"
+	"gatehill.io/imposter/engine"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io"
 	"opendeps.org/opendeps/fileutil"
 	"opendeps.org/opendeps/model"
 	"os"
@@ -55,74 +48,19 @@ by this tool.`,
 		stagingDir := generateMockConfig(specFile, spec)
 		defer os.Remove(stagingDir)
 
-		startMockEngine(stagingDir)
+		containerId := engine.StartMockEngine(stagingDir, engine.EngineStartOptions{
+			Port:           8080,
+			ImageTag:       "latest",
+			ForceImagePull: false,
+			LogLevel:       "DEBUG",
+		})
+		trapExit(containerId)
+		engine.BlockUntilStopped(containerId)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(mockCmd)
-}
-
-func startMockEngine(stagingDir string) {
-	logrus.Info("starting mock engine")
-
-	ctx := context.Background()
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		panic(err)
-	}
-
-	reader, err := cli.ImagePull(ctx, "docker.io/outofcoffee/imposter-openapi", types.ImagePullOptions{})
-	if err != nil {
-		panic(err)
-	}
-	_, err = io.Copy(os.Stdout, reader)
-	if err != nil {
-		panic(err)
-	}
-
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Image: "outofcoffee/imposter-openapi",
-	}, &container.HostConfig{
-		Mounts: []mount.Mount{
-			{
-				Type:   mount.TypeBind,
-				Source: stagingDir,
-				Target: "/opt/imposter/config",
-			},
-		},
-		PortBindings: nat.PortMap{
-			"8080/tcp": []nat.PortBinding{
-				{
-					HostIP:   "0.0.0.0",
-					HostPort: "8080",
-				},
-			},
-		},
-	}, nil, nil, "")
-	if err != nil {
-		panic(err)
-	}
-
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		panic(err)
-	}
-
-	trapExit(cli, ctx, resp.ID)
-	println("container engine started - press ctrl+c to stop")
-
-	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{
-		ShowStdout: true,
-		Follow:     true,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-	if err != nil {
-		panic(err)
-	}
 }
 
 func generateMockConfig(specFile string, spec *model.OpenDeps) string {
@@ -174,32 +112,13 @@ specFile: "%v"
 	}
 }
 
-func stopMockEngine(cli *client.Client, ctx context.Context, containerID string) {
-	logrus.Infof("\rstopping mock engine...\n")
-	err := cli.ContainerStop(ctx, containerID, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	statusCh, errCh := cli.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			panic(err)
-		}
-	case <-statusCh:
-	}
-
-	println("container engine stopped")
-}
-
 // listen for an interrupt from the OS, then attempt engine cleanup
-func trapExit(cli *client.Client, ctx context.Context, containerID string) {
+func trapExit(containerId string) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		stopMockEngine(cli, ctx, containerID)
+		engine.StopMockEngine(containerId)
 		os.Exit(0)
 	}()
 }
