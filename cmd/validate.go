@@ -21,6 +21,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 	"io/ioutil"
 	"log"
+	"opendeps.org/opendeps/fileutil"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
@@ -31,12 +32,15 @@ var validateCmd = &cobra.Command{
 	Use:   "validate OPENDEPS_FILE",
 	Short: "Validate a file against the OpenDeps schema",
 	Long:  `Validates a YAML file against the OpenDeps schema.`,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		spec := args[0]
-		logrus.Infof("validating %v\n", spec)
+		specFile, err := fileutil.FindSpecFile(args)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		logrus.Infof("validating opendeps manifest %v\n", specFile)
 
-		json, err := loadSpecAsJson(spec)
+		json, err := loadSpecAsJson(specFile)
 		if err != nil {
 			log.Fatal(err)
 		}

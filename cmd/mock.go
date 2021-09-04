@@ -38,13 +38,15 @@ on their OpenAPI specifications defined in the OpenDeps file.
 
 This assumes that the specification URL is reachable
 by this tool.`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		specFile := args[0]
+		specFile, err := fileutil.FindSpecFile(args)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		logrus.Debugf("reading opendeps manifest: %v\n", specFile)
 
-		logrus.Debugf("reading dependencies: %v\n", specFile)
 		spec := model.Parse(specFile)
-
 		stagingDir := generateMockConfig(specFile, spec)
 		defer os.Remove(stagingDir)
 

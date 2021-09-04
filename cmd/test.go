@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net/http"
+	"opendeps.org/opendeps/fileutil"
 	"opendeps.org/opendeps/model"
 	"opendeps.org/opendeps/openapi"
 	"os"
@@ -34,9 +35,12 @@ var testCmd = &cobra.Command{
 	Long: `Invokes the availability endpoints of each dependency,
 optionally ignoring failures if the dependency is not
 marked as required.`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		specFile := args[0]
+		specFile, err := fileutil.FindSpecFile(args)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 
 		logrus.Info("testing dependencies")
 		spec := model.Parse(specFile)
