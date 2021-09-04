@@ -38,7 +38,7 @@ var validateCmd = &cobra.Command{
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		logrus.Infof("validating opendeps manifest %v\n", specFile)
+		logrus.Infof("validating opendeps manifest: %v\n", specFile)
 
 		json, err := loadSpecAsJson(specFile)
 		if err != nil {

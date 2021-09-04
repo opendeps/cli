@@ -24,6 +24,7 @@ import (
 	"opendeps.org/opendeps/model"
 	"opendeps.org/opendeps/openapi"
 	"os"
+	"strings"
 )
 
 var quitIfDown, stopIfDown, failOptional bool
@@ -42,30 +43,15 @@ marked as required.`,
 			logrus.Fatal(err)
 		}
 
-		logrus.Info("testing dependencies")
-		spec := model.Parse(specFile)
+		successful, tested := testDependencies(specFile)
 
-		unavailable := false
-		for _, dep := range spec.Dependencies {
-			err := testDependency(specFile, dep)
-			if err != nil {
-				if dep.Required || failOptional {
-					logrus.Warnf("\u274C unavailable: %v: %v", dep.Summary, err)
-					unavailable = true
-					if stopIfDown {
-						break
-					}
-				} else {
-					logrus.Warnf("\u26A0 unavailable: %v: %v", dep.Summary, err)
-				}
-			} else {
-				logrus.Infof("\u2705 available: %v", dep.Summary)
+		if successful == tested {
+			logrus.Infof("all %d dependencies are available", tested)
+		} else {
+			// at least one dependency failed
+			if quitIfDown {
+				os.Exit(1)
 			}
-		}
-
-		// at least one dependency failed
-		if unavailable && quitIfDown {
-			os.Exit(1)
 		}
 	},
 }
@@ -76,6 +62,31 @@ func init() {
 	testCmd.Flags().BoolVarP(&quitIfDown, "quit-if-down", "q", false, "Exit with non-zero status if dependencies are down")
 	testCmd.Flags().BoolVarP(&stopIfDown, "stop-if-down", "s", false, "Don't check further dependencies if one is down")
 	testCmd.Flags().BoolVarP(&failOptional, "fail-optional", "o", false, "Fail if optional dependencies are down (default false)")
+}
+
+func testDependencies(specFile string) (successful int, tested int) {
+	logrus.Debugf("reading opendeps manifest: %v", specFile)
+	spec := model.Parse(specFile)
+
+	logrus.Infof("testing %d dependencies", len(spec.Dependencies))
+	available := 0
+	for _, dep := range spec.Dependencies {
+		err := testDependency(specFile, dep)
+		if err != nil {
+			if dep.Required || failOptional {
+				logrus.Warnf("\u274C unavailable: %v: %v", dep.Summary, err)
+				if stopIfDown {
+					break
+				}
+			} else {
+				logrus.Warnf("\u26A0 unavailable: %v: %v", dep.Summary, err)
+			}
+		} else {
+			logrus.Infof("\u2705 available: %v", dep.Summary)
+			available++
+		}
+	}
+	return available, len(spec.Dependencies)
 }
 
 func testDependency(specFile string, dep model.Dependency) error {
@@ -94,7 +105,9 @@ func testDependency(specFile string, dep model.Dependency) error {
 		if err != nil {
 			return err
 		}
-		url = fmt.Sprintf("%v/%v", basePath, dep.Availability.Path)
+		trimmedBasePath := strings.TrimSuffix(basePath, "/")
+		trimmedPath := strings.TrimPrefix(dep.Availability.Path, "/")
+		url = fmt.Sprintf("%v/%v", trimmedBasePath, trimmedPath)
 
 	} else {
 		panic(fmt.Errorf("No availability URL or path for %v\n", dep.Summary))
@@ -104,7 +117,7 @@ func testDependency(specFile string, dep model.Dependency) error {
 	if err != nil {
 		return fmt.Errorf("failed to reach availability URL [%v]: %v\n", url, err)
 	} else {
-		logrus.Debugf("%v availability: %s\n", dep.Summary, resp.Status)
+		logrus.Debugf("checked availability [%v]: %s\n", dep.Summary, resp.Status)
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
 			return fmt.Errorf("failed to reach availability URL [%v]: %s\n", url, resp.Status)
 		}
