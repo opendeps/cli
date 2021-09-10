@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"gatehill.io/imposter/engine"
+	"gatehill.io/imposter/engine/docker"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"opendeps.org/opendeps/fileutil"
@@ -50,14 +51,15 @@ by this tool.`,
 		stagingDir := generateMockConfig(specFile, spec)
 		defer os.Remove(stagingDir)
 
-		containerId := engine.StartMockEngine(stagingDir, engine.EngineStartOptions{
-			Port:           8080,
-			ImageTag:       "latest",
-			ForceImagePull: false,
-			LogLevel:       "DEBUG",
+		mockEngine := docker.BuildEngine(stagingDir, engine.StartOptions{
+			Port:            8080,
+			ImageTag:        "latest",
+			ImagePullPolicy: engine.ImagePullIfNotPresent,
+			LogLevel:        "DEBUG",
 		})
-		trapExit(containerId)
-		engine.BlockUntilStopped(containerId)
+		mockEngine.Start()
+		trapExit(mockEngine)
+		mockEngine.BlockUntilStopped()
 	},
 }
 
@@ -115,12 +117,12 @@ specFile: "%v"
 }
 
 // listen for an interrupt from the OS, then attempt engine cleanup
-func trapExit(containerId string) {
+func trapExit(mockEngine engine.MockEngine) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		engine.StopMockEngine(containerId)
+		mockEngine.Stop()
 		os.Exit(0)
 	}()
 }
