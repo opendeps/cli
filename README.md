@@ -72,10 +72,25 @@ Flags:
   -s, --server stringToString   Override server base URL for a dependency (e.g. foo_service=https://example.com) (default [])
 ```
 
+Create an OpenDeps manifest based on OpenAPI files:
+
+```
+Creates an OpenDeps manifest based on the OpenAPI specification files in a directory.
+
+If DIR is not specified, the current working directory is used.
+
+Usage:
+  opendeps scaffold DIR [flags]
+
+Flags:
+  -f, --force-overwrite   Force overwrite of destination file(s) if already exist
+  -h, --help              help for scaffold
+```
+
 Validate OpenDeps file:
 
 ```
-Validates a YAML file against the OpenDeps schema.
+Validates a YAML manifest file against the OpenDeps schema.
 
 Usage:
   opendeps validate OPENDEPS_FILE

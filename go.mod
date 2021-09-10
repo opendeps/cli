@@ -43,6 +43,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/radovskyb/watcher v1.0.7 // indirect
 	golang.org/x/net v0.0.0-20210825183410-e898025ed96a // indirect
 	google.golang.org/genproto v0.0.0-20210830153122-0bac4d21c8ea // indirect
 	google.golang.org/grpc v1.40.0 // indirect

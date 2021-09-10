@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package cmd
 
 import (
@@ -31,7 +32,7 @@ import (
 var validateCmd = &cobra.Command{
 	Use:   "validate OPENDEPS_FILE",
 	Short: "Validate a file against the OpenDeps schema",
-	Long:  `Validates a YAML file against the OpenDeps schema.`,
+	Long:  `Validates a YAML manifest file against the OpenDeps schema.`,
 	Args:  cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
 		specFile, err := fileutil.FindSpecFile(args)
