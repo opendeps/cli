@@ -65,10 +65,11 @@ Usage:
   opendeps test OPENDEPS_FILE [flags]
 
 Flags:
-  -o, --fail-optional   Fail if optional dependencies are down (default false)
-  -h, --help            help for test
-  -q, --quit-if-down    Return non-zero status if dependencies are down
-  -s, --stop-if-down    Don't check further dependencies if one is down
+  -c, --continue                Continue to check further dependencies if one or more is down (default true)
+  -h, --help                    help for test
+  -z, --non-zero-exit           Exit with non-zero status if dependencies are down
+  -o, --require-optional        Require optional dependencies to be available
+  -s, --server stringToString   Override server base URL for a dependency (e.g. foo_service=https://example.com) (default [])
 ```
 
 Validate OpenDeps file:

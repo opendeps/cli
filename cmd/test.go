@@ -27,7 +27,8 @@ import (
 	"strings"
 )
 
-var quitIfDown, stopIfDown, failOptional bool
+var flagNonZeroExit, flagContinueIfDown, flagRequireOptional bool
+var flagServers map[string]string
 
 // testCmd represents the test command
 var testCmd = &cobra.Command{
@@ -49,7 +50,7 @@ marked as required.`,
 			logrus.Infof("all %d dependencies are available", tested)
 		} else {
 			// at least one dependency failed
-			if quitIfDown {
+			if flagNonZeroExit {
 				os.Exit(1)
 			}
 		}
@@ -59,9 +60,10 @@ marked as required.`,
 func init() {
 	rootCmd.AddCommand(testCmd)
 
-	testCmd.Flags().BoolVarP(&quitIfDown, "quit-if-down", "q", false, "Exit with non-zero status if dependencies are down")
-	testCmd.Flags().BoolVarP(&stopIfDown, "stop-if-down", "s", false, "Don't check further dependencies if one is down")
-	testCmd.Flags().BoolVarP(&failOptional, "fail-optional", "o", false, "Fail if optional dependencies are down (default false)")
+	testCmd.Flags().BoolVarP(&flagNonZeroExit, "non-zero-exit", "z", false, "Exit with non-zero status if dependencies are down")
+	testCmd.Flags().BoolVarP(&flagContinueIfDown, "continue", "c", true, "Continue to check further dependencies if one or more is down")
+	testCmd.Flags().BoolVarP(&flagRequireOptional, "require-optional", "o", false, "Require optional dependencies to be available")
+	testCmd.Flags().StringToStringVarP(&flagServers, "server", "s", nil, "Override server base URL for a dependency (e.g. foo_service=https://example.com)")
 }
 
 func testDependencies(specFile string) (successful int, tested int) {
@@ -70,12 +72,12 @@ func testDependencies(specFile string) (successful int, tested int) {
 
 	logrus.Infof("testing %d dependencies", len(spec.Dependencies))
 	available := 0
-	for _, dep := range spec.Dependencies {
-		err := testDependency(specFile, dep)
+	for depName, dep := range spec.Dependencies {
+		err := testDependency(specFile, depName, dep)
 		if err != nil {
-			if dep.Required || failOptional {
+			if dep.Required || flagRequireOptional {
 				logrus.Warnf("\u274C unavailable: %v: %v", dep.Summary, err)
-				if stopIfDown {
+				if !flagContinueIfDown {
 					break
 				}
 			} else {
@@ -89,7 +91,7 @@ func testDependencies(specFile string) (successful int, tested int) {
 	return available, len(spec.Dependencies)
 }
 
-func testDependency(specFile string, dep model.Dependency) error {
+func testDependency(specFile string, depName string, dep model.Dependency) error {
 	if "" != dep.Availability.Security {
 		logrus.Warnf("security configuration for availability endpoints is not supported\n")
 	}
@@ -101,7 +103,7 @@ func testDependency(specFile string, dep model.Dependency) error {
 
 	} else if "" != dep.Availability.Path {
 		// relative - use openapi spec servers as base path
-		basePath, err := determineBasePath(specFile, dep)
+		basePath, err := determineBasePath(specFile, depName, dep)
 		if err != nil {
 			return err
 		}
@@ -125,18 +127,24 @@ func testDependency(specFile string, dep model.Dependency) error {
 	return nil
 }
 
-func determineBasePath(specFile string, dependency model.Dependency) (string, error) {
-	openapiNormalisedPath := makeAbsoluteRelativeToFile(dependency.Spec, specFile)
-	openapiSpec, err := openapi.Parse(openapiNormalisedPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse spec [%v]: %v\n", openapiNormalisedPath, err)
+func determineBasePath(specFile string, depName string, dependency model.Dependency) (string, error) {
+	if serverUrl, found := flagServers[depName]; found {
+		logrus.Debugf("determined server [%v] from overrides", serverUrl)
+		return serverUrl, nil
+
+	} else {
+		openapiNormalisedPath := makeAbsoluteRelativeToFile(dependency.Spec, specFile)
+		openapiSpec, err := openapi.Parse(openapiNormalisedPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse spec [%v]: %v\n", openapiNormalisedPath, err)
+		}
+		if len(openapiSpec.Servers) == 0 {
+			return "", fmt.Errorf("no servers found in spec [%v]\n", openapiNormalisedPath)
+		} else if len(openapiSpec.Servers) > 1 {
+			logrus.Warnf("more than 1 server found in spec [%v] - using first\n", openapiNormalisedPath)
+		}
+		serverUrl := openapiSpec.Servers[0].Url
+		logrus.Debugf("determined server [%v] from openapi spec [%v]", serverUrl, openapiNormalisedPath)
+		return serverUrl, nil
 	}
-	if len(openapiSpec.Servers) == 0 {
-		return "", fmt.Errorf("no servers found in spec [%v]\n", openapiNormalisedPath)
-	} else if len(openapiSpec.Servers) > 1 {
-		logrus.Warnf("more than 1 server found in spec [%v] - using first\n", openapiNormalisedPath)
-	}
-	serverUrl := openapiSpec.Servers[0].Url
-	logrus.Debugf("determined server [%v] from openapi spec [%v]", serverUrl, openapiNormalisedPath)
-	return serverUrl, nil
 }
