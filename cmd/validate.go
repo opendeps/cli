@@ -35,13 +35,13 @@ var validateCmd = &cobra.Command{
 	Long:  `Validates a YAML manifest file against the OpenDeps schema.`,
 	Args:  cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		specFile, err := fileutil.FindSpecFile(args)
+		manifestPath, err := fileutil.FindManifestFile(args)
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		logrus.Infof("validating opendeps manifest: %v\n", specFile)
+		logrus.Infof("validating opendeps manifest: %v\n", manifestPath)
 
-		json, err := loadSpecAsJson(specFile)
+		json, err := loadSpecAsJson(manifestPath)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -54,15 +54,15 @@ func init() {
 	rootCmd.AddCommand(validateCmd)
 }
 
-func loadSpecAsJson(specFile string) ([]byte, error) {
-	y, err := ioutil.ReadFile(specFile)
+func loadSpecAsJson(manifestPath string) ([]byte, error) {
+	y, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	j, err := yaml.YAMLToJSON(y)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing YAML at %v: %v\n", specFile, err)
+		return nil, fmt.Errorf("error parsing YAML at %v: %v\n", manifestPath, err)
 	}
 	return j, nil
 }

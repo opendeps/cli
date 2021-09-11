@@ -29,13 +29,13 @@ func getDefaultSearchFilenames() []string {
 	}
 }
 
-// FindSpecFile searches args for a path to an OpenDeps manifest file.
+// FindManifestFile searches args for a path to an OpenDeps manifest file.
 // If args is empty, the working directory is used and well-known
 // manifest filenames are searched.
 // If args is not empty, the path is made absolute, followed by
 // a search for well-known filenames, or a fully qualified
 // file path if specified.
-func FindSpecFile(args []string) (specFile string, err error) {
+func FindManifestFile(args []string) (specFile string, err error) {
 	if len(args) == 0 {
 		wd, _ := os.Getwd()
 		return findSpecInDir(wd)

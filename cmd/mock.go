@@ -42,15 +42,19 @@ This assumes that the specification URL is reachable
 by this tool.`,
 	Args: cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		specFile, err := fileutil.FindSpecFile(args)
+		manifestPath, err := fileutil.FindManifestFile(args)
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		logrus.Debugf("reading opendeps manifest: %v\n", specFile)
 
-		spec := model.Parse(specFile)
-		stagingDir := generateMockConfig(specFile, spec)
+		stagingDir := fileutil.GenerateStagingDir()
 		defer os.Remove(stagingDir)
+
+		logrus.Debugf("reading opendeps manifest: %v\n", manifestPath)
+		manifest := model.Parse(manifestPath)
+
+		bundleManifest(stagingDir, manifestPath)
+		generateMockConfig(stagingDir, manifestPath, manifest)
 
 		mockEngine := docker.BuildEngine(stagingDir, engine.StartOptions{
 			Port:            8080,
@@ -64,16 +68,23 @@ by this tool.`,
 	},
 }
 
+func bundleManifest(stagingDir string, manifestPath string) {
+	logrus.Debugf("bundling manifest: %v", manifestPath)
+	err := fileutil.CopyContent(manifestPath, filepath.Join(stagingDir, "opendeps.yaml"))
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	writeManifestOpenApiSpec(stagingDir)
+}
+
 func init() {
 	rootCmd.AddCommand(mockCmd)
 }
 
-func generateMockConfig(specFile string, spec *model.OpenDeps) string {
-	stagingDir := fileutil.GenerateStagingDir()
-
-	for _, dependency := range spec.Dependencies {
+func generateMockConfig(stagingDir string, specFile string, manifest *model.OpenDeps) string {
+	for _, dependency := range manifest.Dependencies {
 		openapiNormalisedPath := makeAbsoluteRelativeToFile(dependency.Spec, specFile)
-		logrus.Debugf("copying openapi spec: %v\n", openapiNormalisedPath)
+		logrus.Debugf("bundling openapi spec: %v\n", openapiNormalisedPath)
 
 		openapiFilename := filepath.Base(openapiNormalisedPath)
 		openapiDestFile := filepath.Join(stagingDir, openapiFilename)
@@ -99,6 +110,46 @@ func makeAbsoluteRelativeToFile(filePath string, specFile string) string {
 	return openapiNormalisedPath
 }
 
+func writeManifestOpenApiSpec(configDir string) {
+	specFileName := "opendeps-openapi-gen.yaml"
+	specFile, err := os.Create(filepath.Join(configDir, specFileName))
+	if err != nil {
+		panic(err)
+	}
+	defer specFile.Close()
+
+	spec := `---
+openapi: "3.0.1"
+
+info:
+  title: OpenDeps Manifest endpoint
+  version: "1.0.0"
+
+paths:
+  /.well-known/opendeps/manifest.yaml:
+    get:
+      responses:
+        '200':
+          description: Returns the OpenDeps manifest
+          content:
+            text/x-yaml:
+              schema:
+                type: object
+`
+
+	_, err = specFile.WriteString(spec)
+	if err != nil {
+		panic(err)
+	}
+
+	err = specFile.Sync()
+	if err != nil {
+		panic(err)
+	}
+
+	writeMockConfig(configDir, specFileName)
+}
+
 func writeMockConfig(configDir string, openapiFilename string) {
 	configFile, err := os.Create(filepath.Join(configDir, fmt.Sprintf("%v-config.yaml", openapiFilename)))
 	if err != nil {
@@ -109,9 +160,21 @@ func writeMockConfig(configDir string, openapiFilename string) {
 	config := fmt.Sprintf(`---
 plugin: openapi
 specFile: "%v"
+
+resources:
+- path: /.well-known/opendeps/manifest.yaml
+  method: GET
+  response:
+    staticFile: opendeps.yaml
+    template: true
 `, openapiFilename)
 
 	_, err = configFile.WriteString(config)
+	if err != nil {
+		panic(err)
+	}
+
+	err = configFile.Sync()
 	if err != nil {
 		panic(err)
 	}

@@ -40,12 +40,12 @@ optionally ignoring failures if the dependency is not
 marked as required.`,
 	Args: cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		specFile, err := fileutil.FindSpecFile(args)
+		manifestPath, err := fileutil.FindManifestFile(args)
 		if err != nil {
 			logrus.Fatal(err)
 		}
 
-		successful, tested := testDependencies(specFile)
+		successful, tested := testDependencies(manifestPath)
 
 		if successful == tested {
 			logrus.Infof("all %d dependencies are available", tested)
@@ -67,14 +67,14 @@ func init() {
 	testCmd.Flags().StringToStringVarP(&flagServers, "server", "s", nil, "Override server base URL for a dependency (e.g. foo_service=https://example.com)")
 }
 
-func testDependencies(specFile string) (successful int, tested int) {
-	logrus.Debugf("reading opendeps manifest: %v", specFile)
-	spec := model.Parse(specFile)
+func testDependencies(manifestPath string) (successful int, tested int) {
+	logrus.Debugf("reading opendeps manifest: %v", manifestPath)
+	manifest := model.Parse(manifestPath)
 
-	logrus.Infof("testing %d dependencies", len(spec.Dependencies))
+	logrus.Infof("testing %d dependencies", len(manifest.Dependencies))
 	available := 0
-	for depName, dep := range spec.Dependencies {
-		err := testDependency(specFile, depName, dep)
+	for depName, dep := range manifest.Dependencies {
+		err := testDependency(manifestPath, depName, dep)
 		if err != nil {
 			if dep.Required || flagRequireOptional {
 				logrus.Warnf("\u274C unavailable: %v: %v", dep.Summary, err)
@@ -89,7 +89,7 @@ func testDependencies(specFile string) (successful int, tested int) {
 			available++
 		}
 	}
-	return available, len(spec.Dependencies)
+	return available, len(manifest.Dependencies)
 }
 
 func testDependency(specFile string, depName string, dep model.Dependency) error {
