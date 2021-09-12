@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 )
 
-func Parse(specFile string) *OpenDeps {
-	raw, err := ioutil.ReadFile(specFile)
+func Parse(manifestPath string) *OpenDeps {
+	raw, err := ioutil.ReadFile(manifestPath)
 	if err != nil {
 		logrus.Fatalln(err)
 	}

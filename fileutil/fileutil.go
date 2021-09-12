@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -97,10 +98,6 @@ func writeToFile(source io.Reader, dest string) error {
 		return fmt.Errorf("error : %s", err.Error())
 	}
 
-	err = destFile.Sync()
-	if err != nil {
-		return fmt.Errorf("error : %s", err.Error())
-	}
 	return nil
 }
 
@@ -114,4 +111,16 @@ func fetchFile(source string) (io.ReadCloser, error) {
 		normalisedPath = source
 	}
 	return os.Open(normalisedPath)
+}
+
+func MakeAbsoluteRelativeToFile(inputPath string, relativeToPath string) string {
+	specDir := filepath.Dir(relativeToPath)
+
+	var normalisedPath string
+	if strings.HasPrefix(inputPath, "./") {
+		normalisedPath = filepath.Join(specDir, strings.TrimPrefix(inputPath, "."))
+	} else {
+		normalisedPath = inputPath
+	}
+	return normalisedPath
 }

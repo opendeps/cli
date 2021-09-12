@@ -17,9 +17,10 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
 	"gatehill.io/imposter/engine"
 	"gatehill.io/imposter/engine/docker"
+	imposterfileutil "gatehill.io/imposter/fileutil"
+	"gatehill.io/imposter/impostermodel"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"opendeps.org/opendeps/fileutil"
@@ -27,7 +28,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 )
 
@@ -53,8 +53,8 @@ by this tool.`,
 		logrus.Debugf("reading opendeps manifest: %v\n", manifestPath)
 		manifest := model.Parse(manifestPath)
 
-		bundleManifest(stagingDir, manifestPath)
-		generateMockConfig(stagingDir, manifestPath, manifest)
+		bundleManifest(stagingDir, manifestPath, flagForceOverwrite)
+		bundleSpecs(stagingDir, manifestPath, manifest, flagForceOverwrite)
 
 		mockEngine := docker.BuildEngine(stagingDir, engine.StartOptions{
 			Port:            8080,
@@ -68,50 +68,51 @@ by this tool.`,
 	},
 }
 
-func bundleManifest(stagingDir string, manifestPath string) {
+func init() {
+	rootCmd.AddCommand(mockCmd)
+}
+
+func bundleManifest(stagingDir string, manifestPath string, forceOverwrite bool) {
 	logrus.Debugf("bundling manifest: %v", manifestPath)
 	err := fileutil.CopyContent(manifestPath, filepath.Join(stagingDir, "opendeps.yaml"))
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	writeManifestOpenApiSpec(stagingDir)
+
+	specFileName := "opendeps-openapi-gen.yaml"
+	writeManifestSpec(stagingDir, specFileName)
+
+	resources := []impostermodel.Resource{
+		{
+			Path:   "/.well-known/opendeps/manifest.yaml",
+			Method: "GET",
+			Response: &impostermodel.ResponseConfig{
+				StaticFile: "opendeps.yaml",
+			},
+		},
+	}
+	writeMockConfig(filepath.Join(stagingDir, specFileName), resources, forceOverwrite)
 }
 
-func init() {
-	rootCmd.AddCommand(mockCmd)
-}
-
-func generateMockConfig(stagingDir string, specFile string, manifest *model.OpenDeps) string {
+func bundleSpecs(stagingDir string, manifestPath string, manifest *model.OpenDeps, forceOverwrite bool) string {
 	for _, dependency := range manifest.Dependencies {
-		openapiNormalisedPath := makeAbsoluteRelativeToFile(dependency.Spec, specFile)
-		logrus.Debugf("bundling openapi spec: %v\n", openapiNormalisedPath)
+		specNormalisedPath := fileutil.MakeAbsoluteRelativeToFile(dependency.Spec, manifestPath)
+		logrus.Debugf("bundling openapi spec: %v\n", specNormalisedPath)
 
-		openapiFilename := filepath.Base(openapiNormalisedPath)
-		openapiDestFile := filepath.Join(stagingDir, openapiFilename)
-		err := fileutil.CopyContent(openapiNormalisedPath, openapiDestFile)
+		specDestPath := filepath.Join(stagingDir, filepath.Base(specNormalisedPath))
+		err := fileutil.CopyContent(specNormalisedPath, specDestPath)
 		if err != nil {
 			panic(err)
 		}
 
-		writeMockConfig(stagingDir, openapiFilename)
+		writeMockConfig(specDestPath, nil, forceOverwrite)
 	}
 	return stagingDir
 }
 
-func makeAbsoluteRelativeToFile(filePath string, specFile string) string {
-	specDir := filepath.Dir(specFile)
-
-	var openapiNormalisedPath string
-	if strings.HasPrefix(filePath, "./") {
-		openapiNormalisedPath = filepath.Join(specDir, strings.TrimPrefix(filePath, "."))
-	} else {
-		openapiNormalisedPath = filePath
-	}
-	return openapiNormalisedPath
-}
-
-func writeManifestOpenApiSpec(configDir string) {
-	specFileName := "opendeps-openapi-gen.yaml"
+// writeManifestSpec creates an OpenAPI spec describing the well known endpoint
+// that serves the manifest.
+func writeManifestSpec(configDir string, specFileName string) {
 	specFile, err := os.Create(filepath.Join(configDir, specFileName))
 	if err != nil {
 		panic(err)
@@ -141,40 +142,21 @@ paths:
 	if err != nil {
 		panic(err)
 	}
-
-	err = specFile.Sync()
-	if err != nil {
-		panic(err)
-	}
-
-	writeMockConfig(configDir, specFileName)
 }
 
-func writeMockConfig(configDir string, openapiFilename string) {
-	configFile, err := os.Create(filepath.Join(configDir, fmt.Sprintf("%v-config.yaml", openapiFilename)))
+func writeMockConfig(specFilePath string, resources []impostermodel.Resource, forceOverwrite bool) {
+	configFilePath := imposterfileutil.GenerateFilePathAdjacentToFile(specFilePath, "-config.yaml", forceOverwrite)
+	configFile, err := os.Create(configFilePath)
 	if err != nil {
 		panic(err)
 	}
 	defer configFile.Close()
 
-	config := fmt.Sprintf(`---
-plugin: openapi
-specFile: "%v"
+	config := impostermodel.GenerateConfig(specFilePath, resources, impostermodel.ConfigGenerationOptions{
+		ScriptEngine: impostermodel.ScriptEngineNone,
+	})
 
-resources:
-- path: /.well-known/opendeps/manifest.yaml
-  method: GET
-  response:
-    staticFile: opendeps.yaml
-    template: true
-`, openapiFilename)
-
-	_, err = configFile.WriteString(config)
-	if err != nil {
-		panic(err)
-	}
-
-	err = configFile.Sync()
+	_, err = configFile.Write(config)
 	if err != nil {
 		panic(err)
 	}

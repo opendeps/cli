@@ -35,10 +35,10 @@ func getDefaultSearchFilenames() []string {
 // If args is not empty, the path is made absolute, followed by
 // a search for well-known filenames, or a fully qualified
 // file path if specified.
-func FindManifestFile(args []string) (specFile string, err error) {
+func FindManifestFile(args []string) (manifestPath string, err error) {
 	if len(args) == 0 {
 		wd, _ := os.Getwd()
-		return findSpecInDir(wd)
+		return findManifestInDir(wd)
 	} else {
 		absPath, _ := filepath.Abs(args[0])
 		fileInfo, err := os.Stat(absPath)
@@ -50,13 +50,13 @@ func FindManifestFile(args []string) (specFile string, err error) {
 			}
 		}
 		if fileInfo.IsDir() {
-			return findSpecInDir(absPath)
+			return findManifestInDir(absPath)
 		}
 		return absPath, nil
 	}
 }
 
-func findSpecInDir(dir string) (specFile string, err error) {
+func findManifestInDir(dir string) (manifestPath string, err error) {
 	for _, defaultSearchFilename := range getDefaultSearchFilenames() {
 		searchFilePath := filepath.Join(dir, defaultSearchFilename)
 		if _, err := os.Stat(searchFilePath); err != nil {

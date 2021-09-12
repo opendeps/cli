@@ -92,7 +92,7 @@ func testDependencies(manifestPath string) (successful int, tested int) {
 	return available, len(manifest.Dependencies)
 }
 
-func testDependency(specFile string, depName string, dep model.Dependency) error {
+func testDependency(manifestPath string, depName string, dep model.Dependency) error {
 	if "" != dep.Availability.Security {
 		logrus.Warnf("security configuration for availability endpoints is not supported\n")
 	}
@@ -104,7 +104,7 @@ func testDependency(specFile string, depName string, dep model.Dependency) error
 
 	} else if "" != dep.Availability.Path {
 		// relative - use openapi spec servers as base path
-		basePath, err := determineBasePath(specFile, depName, dep)
+		basePath, err := determineBasePath(manifestPath, depName, dep)
 		if err != nil {
 			return err
 		}
@@ -128,24 +128,24 @@ func testDependency(specFile string, depName string, dep model.Dependency) error
 	return nil
 }
 
-func determineBasePath(specFile string, depName string, dependency model.Dependency) (string, error) {
+func determineBasePath(manifestPath string, depName string, dependency model.Dependency) (string, error) {
 	if serverUrl, found := flagServers[depName]; found {
 		logrus.Debugf("determined server [%v] from overrides", serverUrl)
 		return serverUrl, nil
 
 	} else {
-		openapiNormalisedPath := makeAbsoluteRelativeToFile(dependency.Spec, specFile)
-		openapiSpec, err := openapi.Parse(openapiNormalisedPath)
+		specNormalisedPath := fileutil.MakeAbsoluteRelativeToFile(dependency.Spec, manifestPath)
+		openapiSpec, err := openapi.Parse(specNormalisedPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to parse spec [%v]: %v\n", openapiNormalisedPath, err)
+			return "", fmt.Errorf("failed to parse spec [%v]: %v\n", specNormalisedPath, err)
 		}
 		if len(openapiSpec.Servers) == 0 {
-			return "", fmt.Errorf("no servers found in spec [%v]\n", openapiNormalisedPath)
+			return "", fmt.Errorf("no servers found in spec [%v]\n", specNormalisedPath)
 		} else if len(openapiSpec.Servers) > 1 {
-			logrus.Warnf("more than 1 server found in spec [%v] - using first\n", openapiNormalisedPath)
+			logrus.Warnf("more than 1 server found in spec [%v] - using first\n", specNormalisedPath)
 		}
 		serverUrl := openapiSpec.Servers[0].Url
-		logrus.Debugf("determined server [%v] from openapi spec [%v]", serverUrl, openapiNormalisedPath)
+		logrus.Debugf("determined server [%v] from openapi spec [%v]", serverUrl, specNormalisedPath)
 		return serverUrl, nil
 	}
 }

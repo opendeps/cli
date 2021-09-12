@@ -91,9 +91,7 @@ func scaffoldManifest(specDir string, forceOverwrite bool) {
 		}
 	}
 
-	manifestFileName := fileutil.GenerateFilenameAdjacentToFile(specDir, filepath.Join(specDir, "opendeps"), ".yaml", forceOverwrite)
-	manifestPath := filepath.Join(specDir, manifestFileName)
-
+	manifestPath := fileutil.GenerateFilePathAdjacentToFile(filepath.Join(specDir, "opendeps"), ".yaml", forceOverwrite)
 	file, err := os.Create(manifestPath)
 	if err != nil {
 		logrus.Fatalf("error creating opendeps manifest file: %v: %v", manifestPath, err)
@@ -110,10 +108,29 @@ func scaffoldManifest(specDir string, forceOverwrite bool) {
 }
 
 func determineAvailabilityPath(spec *openapi.PartialModel) string {
+	var getPaths []string
 	for path, operations := range spec.Paths {
 		if _, found := operations["get"]; found {
-			return path
+			getPaths = append(getPaths, path)
+		}
+	}
+	if len(getPaths) == 1 {
+		return getPaths[0]
+	} else {
+		for _, path := range getPaths {
+			for _, pathHint := range getAvailabilityPathHints() {
+				if path == pathHint {
+					return path
+				}
+			}
 		}
 	}
 	return "/"
+}
+
+func getAvailabilityPathHints() []string {
+	return []string{
+		"/healthz",
+		"/system/status",
+	}
 }
