@@ -22,7 +22,8 @@ import (
 	"github.com/spf13/cobra"
 	"net/http"
 	"opendeps.org/opendeps/fileutil"
-	"opendeps.org/opendeps/model"
+	"opendeps.org/opendeps/manifest/discovery"
+	"opendeps.org/opendeps/manifest/model"
 	"opendeps.org/opendeps/openapi"
 	"os"
 	"strings"
@@ -40,7 +41,7 @@ optionally ignoring failures if the dependency is not
 marked as required.`,
 	Args: cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		manifestPath, err := fileutil.FindManifestFile(args)
+		manifestPath, err := discovery.FindManifestFile(args)
 		if err != nil {
 			logrus.Fatal(err)
 		}

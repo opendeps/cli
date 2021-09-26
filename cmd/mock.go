@@ -19,15 +19,15 @@ package cmd
 import (
 	"gatehill.io/imposter/engine"
 	"gatehill.io/imposter/engine/docker"
-	imposterfileutil "gatehill.io/imposter/fileutil"
-	"gatehill.io/imposter/impostermodel"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"opendeps.org/opendeps/fileutil"
-	"opendeps.org/opendeps/model"
+	"opendeps.org/opendeps/manifest/bundler"
+	"opendeps.org/opendeps/manifest/discovery"
+	"opendeps.org/opendeps/manifest/model"
+	"opendeps.org/opendeps/openapi"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 )
@@ -43,7 +43,7 @@ This assumes that the specification URL is reachable
 by this tool.`,
 	Args: cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		manifestPath, err := fileutil.FindManifestFile(args)
+		manifestPath, err := discovery.FindManifestFile(args)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -54,8 +54,8 @@ by this tool.`,
 		logrus.Debugf("reading opendeps manifest: %v\n", manifestPath)
 		manifest := model.Parse(manifestPath)
 
-		bundleManifest(stagingDir, manifestPath, flagForceOverwrite)
-		bundleSpecs(stagingDir, manifestPath, manifest, flagForceOverwrite)
+		bundler.BundleManifest(stagingDir, manifestPath, flagForceOverwrite)
+		openapi.BundleSpecs(stagingDir, manifestPath, manifest, flagForceOverwrite)
 
 		mockEngine := docker.BuildEngine(stagingDir, engine.StartOptions{
 			Port:           8080,
@@ -74,96 +74,6 @@ by this tool.`,
 
 func init() {
 	rootCmd.AddCommand(mockCmd)
-}
-
-func bundleManifest(stagingDir string, manifestPath string, forceOverwrite bool) {
-	logrus.Debugf("bundling manifest: %v", manifestPath)
-	err := fileutil.CopyContent(manifestPath, filepath.Join(stagingDir, "opendeps.yaml"))
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	specFileName := "opendeps-openapi-gen.yaml"
-	writeManifestSpec(stagingDir, specFileName)
-
-	resources := []impostermodel.Resource{
-		{
-			Path:   "/.well-known/opendeps/manifest.yaml",
-			Method: "GET",
-			Response: &impostermodel.ResponseConfig{
-				StaticFile: "opendeps.yaml",
-			},
-		},
-	}
-	writeMockConfig(filepath.Join(stagingDir, specFileName), resources, forceOverwrite)
-}
-
-func bundleSpecs(stagingDir string, manifestPath string, manifest *model.OpenDeps, forceOverwrite bool) string {
-	for _, dependency := range manifest.Dependencies {
-		specNormalisedPath := fileutil.MakeAbsoluteRelativeToFile(dependency.Spec, manifestPath)
-		logrus.Debugf("bundling openapi spec: %v\n", specNormalisedPath)
-
-		specDestPath := filepath.Join(stagingDir, filepath.Base(specNormalisedPath))
-		err := fileutil.CopyContent(specNormalisedPath, specDestPath)
-		if err != nil {
-			panic(err)
-		}
-
-		writeMockConfig(specDestPath, nil, forceOverwrite)
-	}
-	return stagingDir
-}
-
-// writeManifestSpec creates an OpenAPI spec describing the well known endpoint
-// that serves the manifest.
-func writeManifestSpec(configDir string, specFileName string) {
-	specFile, err := os.Create(filepath.Join(configDir, specFileName))
-	if err != nil {
-		panic(err)
-	}
-	defer specFile.Close()
-
-	spec := `---
-openapi: "3.0.1"
-
-info:
-  title: OpenDeps Manifest endpoint
-  version: "1.0.0"
-
-paths:
-  /.well-known/opendeps/manifest.yaml:
-    get:
-      responses:
-        '200':
-          description: Returns the OpenDeps manifest
-          content:
-            text/x-yaml:
-              schema:
-                type: object
-`
-
-	_, err = specFile.WriteString(spec)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func writeMockConfig(specFilePath string, resources []impostermodel.Resource, forceOverwrite bool) {
-	configFilePath := imposterfileutil.GenerateFilePathAdjacentToFile(specFilePath, "-config.yaml", forceOverwrite)
-	configFile, err := os.Create(configFilePath)
-	if err != nil {
-		panic(err)
-	}
-	defer configFile.Close()
-
-	config := impostermodel.GenerateConfig(specFilePath, resources, impostermodel.ConfigGenerationOptions{
-		ScriptEngine: impostermodel.ScriptEngineNone,
-	})
-
-	_, err = configFile.Write(config)
-	if err != nil {
-		panic(err)
-	}
 }
 
 // listen for an interrupt from the OS, then attempt engine cleanup

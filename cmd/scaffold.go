@@ -21,7 +21,7 @@ import (
 	imposteropenapi "gatehill.io/imposter/openapi"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-	"opendeps.org/opendeps/model"
+	"opendeps.org/opendeps/manifest/model"
 	"opendeps.org/opendeps/openapi"
 	"os"
 	"path/filepath"

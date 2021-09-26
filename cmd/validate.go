@@ -22,7 +22,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 	"io/ioutil"
 	"log"
-	"opendeps.org/opendeps/fileutil"
+	"opendeps.org/opendeps/manifest/discovery"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
@@ -35,7 +35,7 @@ var validateCmd = &cobra.Command{
 	Long:  `Validates a YAML manifest file against the OpenDeps schema.`,
 	Args:  cobra.RangeArgs(0, 1),
 	Run: func(cmd *cobra.Command, args []string) {
-		manifestPath, err := fileutil.FindManifestFile(args)
+		manifestPath, err := discovery.FindManifestFile(args)
 		if err != nil {
 			logrus.Fatal(err)
 		}
