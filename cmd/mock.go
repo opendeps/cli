@@ -28,6 +28,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 )
 
@@ -57,14 +58,17 @@ by this tool.`,
 		bundleSpecs(stagingDir, manifestPath, manifest, flagForceOverwrite)
 
 		mockEngine := docker.BuildEngine(stagingDir, engine.StartOptions{
-			Port:            8080,
-			ImageTag:        "latest",
-			ImagePullPolicy: engine.ImagePullIfNotPresent,
-			LogLevel:        "DEBUG",
+			Port:           8080,
+			Version:        "latest",
+			PullPolicy:     engine.PullIfNotPresent,
+			LogLevel:       "DEBUG",
+			ReplaceRunning: true,
 		})
-		mockEngine.Start()
-		trapExit(mockEngine)
-		mockEngine.BlockUntilStopped()
+		wg := &sync.WaitGroup{}
+		mockEngine.Start(wg)
+
+		trapExit(wg, mockEngine)
+		wg.Wait()
 	},
 }
 
@@ -163,12 +167,12 @@ func writeMockConfig(specFilePath string, resources []impostermodel.Resource, fo
 }
 
 // listen for an interrupt from the OS, then attempt engine cleanup
-func trapExit(mockEngine engine.MockEngine) {
+func trapExit(wg *sync.WaitGroup, mockEngine engine.MockEngine) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		mockEngine.Stop()
-		os.Exit(0)
+		println()
+		mockEngine.Stop(wg)
 	}()
 }
