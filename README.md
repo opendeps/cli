@@ -36,10 +36,11 @@ Usage:
   opendeps [command]
 
 Available Commands:
-  help        Help about any command
   mock        Start live mocks of API dependencies
   test        Tests the availability of dependencies
+  scaffold    Create an OpenDeps manifest from OpenAPI files
   validate    Validate a file against the OpenDeps schema
+  help        Help about any command
 ```
 
 #### Create and start mocks

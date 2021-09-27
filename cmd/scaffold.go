@@ -35,8 +35,8 @@ var flagForceOverwrite bool
 // scaffoldCmd represents the scaffold command
 var scaffoldCmd = &cobra.Command{
 	Use:   "scaffold DIR",
-	Short: "Create an OpenDeps manifest based on OpenAPI files",
-	Long: `Creates an OpenDeps manifest based on the OpenAPI specification files in a directory.
+	Short: "Create an OpenDeps manifest from OpenAPI files",
+	Long: `Creates an OpenDeps manifest from the OpenAPI specification files in a directory.
 
 If DIR is not specified, the current working directory is used.`,
 	Args: cobra.RangeArgs(0, 1),
