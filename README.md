@@ -42,7 +42,13 @@ Available Commands:
   validate    Validate a file against the OpenDeps schema
 ```
 
-Create and start mocks:
+#### Create and start mocks
+
+Example:
+
+    opendeps mock
+
+Usage:
 
 ```
 Starts a live mock of your API dependencies, based
@@ -53,9 +59,19 @@ by this tool.
 
 Usage:
   opendeps mock OPENDEPS_FILE
+
+Flags:
+  -p, --port   Port on which to listen (default 8080)
 ```
 
-Test dependencies are available:
+#### Test dependencies are available
+
+Example:
+
+    opendeps test
+
+Usage:
+
 ```
 Invokes the availability endpoints of each dependency,
 optionally ignoring failures if the dependency is not
@@ -72,7 +88,13 @@ Flags:
   -s, --server stringToString   Override server base URL for a dependency (e.g. foo_service=https://example.com) (default [])
 ```
 
-Create an OpenDeps manifest based on OpenAPI files:
+#### Create an OpenDeps manifest from OpenAPI files
+
+Example:
+
+    opendeps scaffold
+
+Usage:
 
 ```
 Creates an OpenDeps manifest based on the OpenAPI specification files in a directory.
@@ -87,7 +109,13 @@ Flags:
   -h, --help              help for scaffold
 ```
 
-Validate OpenDeps file:
+#### Validate OpenDeps file
+
+Example:
+
+    opendeps validate
+
+Usage:
 
 ```
 Validates a YAML manifest file against the OpenDeps schema.
@@ -96,7 +124,7 @@ Usage:
   opendeps validate OPENDEPS_FILE
 ```
 
-Help:
+#### Help
 
 ```
 Provides help for any command in the application.

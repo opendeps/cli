@@ -25,6 +25,10 @@ curl -L https://raw.githubusercontent.com/opendeps/cli/main/install/install_open
 
 See [Releases](https://github.com/opendeps/cli/releases) for the latest version.
 
+---
+
+# Advanced installation steps
+
 ## macOS
 
 Only Intel x86_64 is supported on macOS.

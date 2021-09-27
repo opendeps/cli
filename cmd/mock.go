@@ -17,6 +17,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"gatehill.io/imposter/engine"
 	"gatehill.io/imposter/engine/docker"
 	"github.com/sirupsen/logrus"
@@ -31,6 +32,8 @@ import (
 	"sync"
 	"syscall"
 )
+
+var flagPort int
 
 // mockCmd represents the mock command
 var mockCmd = &cobra.Command{
@@ -58,11 +61,12 @@ by this tool.`,
 		openapi.BundleSpecs(stagingDir, manifestPath, manifest, flagForceOverwrite)
 
 		mockEngine := docker.BuildEngine(stagingDir, engine.StartOptions{
-			Port:           8080,
+			Port:           flagPort,
 			Version:        "latest",
 			PullPolicy:     engine.PullIfNotPresent,
 			LogLevel:       "DEBUG",
 			ReplaceRunning: true,
+			Deduplicate:    genDeduplicationKey(manifestPath, flagPort),
 		})
 		wg := &sync.WaitGroup{}
 		mockEngine.Start(wg)
@@ -72,7 +76,14 @@ by this tool.`,
 	},
 }
 
+// genDeduplicationKey overrides the default deduplication key to a
+// stable value, since the staging dir is dynamic
+func genDeduplicationKey(manifestPath string, port int) string {
+	return fmt.Sprintf("%v:%d", manifestPath, port)
+}
+
 func init() {
+	mockCmd.Flags().IntVarP(&flagPort, "port", "p", 8080, "Port on which to listen")
 	rootCmd.AddCommand(mockCmd)
 }
 
