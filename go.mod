@@ -2,10 +2,10 @@ module opendeps.org/opendeps
 
 go 1.17
 
-replace gatehill.io/imposter => github.com/gatehill/imposter-cli v0.6.9
+replace gatehill.io/imposter => github.com/gatehill/imposter-cli v0.7.8
 
 require (
-	gatehill.io/imposter v0.6.9
+	gatehill.io/imposter v0.7.8
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect

@@ -60,7 +60,9 @@ by this tool.`,
 		bundler.BundleManifest(stagingDir, manifestPath, flagForceOverwrite)
 		openapi.BundleSpecs(stagingDir, manifestPath, manifest, flagForceOverwrite)
 
-		mockEngine := docker.BuildEngine(stagingDir, engine.StartOptions{
+		engineType := docker.EnableEngine()
+
+		mockEngine := engine.BuildEngine(engineType, stagingDir, engine.StartOptions{
 			Port:           flagPort,
 			Version:        "latest",
 			PullPolicy:     engine.PullIfNotPresent,
