@@ -96,6 +96,6 @@ func trapExit(wg *sync.WaitGroup, mockEngine engine.MockEngine) {
 	go func() {
 		<-c
 		println()
-		mockEngine.Stop(wg)
+		mockEngine.StopImmediately(wg)
 	}()
 }
